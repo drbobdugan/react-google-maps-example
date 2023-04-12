@@ -8,22 +8,29 @@ const containerStyle = {
     width: '600px',
     height: '600px'
 };
-  
+
+// Set default center to Wayland High School
 const center = {
         lat: 42.342205191165746, 
         lng: -71.37293147353779
 }
 
 const Autocomplete = (props) => {
-    const inputRef = useRef();
+    const searchBox = useRef();
+    const inputBox = useRef();
 
+    // Handle google standalone search box autocomplete
     const handlePlaceChanged = () => { 
-        const [ place ] = inputRef.current.getPlaces();
+        // place is SET by google standalone search box api
+        const [ place ] = searchBox.current.getPlaces();
         if(place) { 
+            // SAVE string address that user set in the search box
+            inputBox.current.placeholder = place.formatted_address;
             console.log(place.formatted_address)
             console.log(place.geometry.location.lat())
             console.log(place.geometry.location.lng())
 
+            // UPDATE marker list with new lat and lng from google autocomplete place object
             const updateMarker = [{lat: place.geometry.location.lat(), lng: place.geometry.location.lng()}]; 
             setMarkers(updateMarker)
         } 
@@ -32,16 +39,28 @@ const Autocomplete = (props) => {
     const [map, setMap] = useState();
     const [markers, setMarkers] = useState([center]);
   
-      useEffect(() => {
+    useEffect(() => {
         
         if (map) {
-          var bounds = new window.google.maps.LatLngBounds();
-          window.google.maps.event.addListenerOnce(map, 'bounds_changed', function() { this.setZoom(Math.min(15, this.getZoom())); });
-          for(var i = 0; i < markers.length; i++) {
-            bounds.extend( new window.google.maps.LatLng(markers[i].lat, markers[i].lng));
-          }
-          map.fitBounds(bounds)
-        }
+            // Use google places api to get lat and lng from string address
+            let request = { query: inputBox.current.placeholder, fields: ["name", "geometry"]};
+            let service = new window.google.maps.places.PlacesService(map);
+        
+            service.findPlaceFromQuery(request, (results, status) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+                const updateMarker = [{lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng()}]; 
+                setMarkers(updateMarker)
+            }
+            });
+
+            // Fit map to markers collection (right now there is only one marker)
+            var bounds = new window.google.maps.LatLngBounds();
+            window.google.maps.event.addListenerOnce(map, 'bounds_changed', function() { this.setZoom(Math.min(15, this.getZoom())); });
+            for(var i = 0; i < markers.length; i++) {
+                bounds.extend( new window.google.maps.LatLng(markers[i].lat, markers[i].lng));
+            }
+            map.fitBounds(bounds)
+       }
       }, [markers, map])
   
       const onLoad = React.useCallback(function callback(map) {
@@ -54,13 +73,15 @@ const Autocomplete = (props) => {
     return (
         <LoadScript googleMapsApiKey={process.env.REACT_APP_GOOGLE_API_KEY} libraries={["places"]}>
             <StandaloneSearchBox
-                    onLoad={ref => inputRef.current = ref}
+                    onLoad={ref => searchBox.current = ref}
                     onPlacesChanged={handlePlaceChanged}
             >
                 <input
+                    id="StandaloneSearchBox"
                     type="text"
                     className="form-control"
-                    placeholder="Enter Location"
+                    placeholder="USCG Station Boston, 1 Harborside Dr, Boston, MA 02128, USA"
+                    ref = {inputBox}
                 />
             </StandaloneSearchBox>
                 <GoogleMap
