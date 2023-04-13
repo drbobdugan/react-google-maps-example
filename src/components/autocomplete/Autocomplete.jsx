@@ -15,6 +15,8 @@ const center = {
         lng: -71.37293147353779
 }
 
+const libraries = ["places"];
+
 const Autocomplete = (props) => {
     const searchBox = useRef();
     const inputBox = useRef();
@@ -38,6 +40,22 @@ const Autocomplete = (props) => {
 
     const [map, setMap] = useState();
     const [markers, setMarkers] = useState([center]);
+
+    useEffect(() => {
+        if (map)
+        {
+            // Use google places api to get lat and lng from string address
+            let request = { query: inputBox.current.placeholder, fields: ["name", "geometry"]};
+            let service = new window.google.maps.places.PlacesService(map);
+        
+            service.findPlaceFromQuery(request, (results, status) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+                const updateMarker = [{lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng()}]; 
+                setMarkers(updateMarker)
+            }
+            });
+        }
+    }, [markers])
   
     useEffect(() => {
         
@@ -71,7 +89,7 @@ const Autocomplete = (props) => {
       }, [])
 
     return (
-        <LoadScript googleMapsApiKey={process.env.REACT_APP_GOOGLE_API_KEY} libraries={["places"]}>
+        <LoadScript googleMapsApiKey={process.env.REACT_APP_GOOGLE_API_KEY} libraries={libraries}>
             <StandaloneSearchBox
                     onLoad={ref => searchBox.current = ref}
                     onPlacesChanged={handlePlaceChanged}
