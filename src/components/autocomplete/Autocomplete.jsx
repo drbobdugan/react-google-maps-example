@@ -24,17 +24,21 @@ const Autocomplete = (props) => {
     // Handle google standalone search box autocomplete
     const handlePlaceChanged = () => { 
         // place is SET by google standalone search box api
-        const [ place ] = searchBox.current.getPlaces();
-        if(place) { 
-            // SAVE string address that user set in the search box
-            inputBox.current.placeholder = place.formatted_address;
-            console.log(place.formatted_address)
-            console.log(place.geometry.location.lat())
-            console.log(place.geometry.location.lng())
+        try {
+            const [place] = searchBox.current.getPlaces();
+        
+            if(place) { 
+                // SAVE string address that user set in the search box
+                inputBox.current.placeholder = place.formatted_address;
 
-            // UPDATE marker list with new lat and lng from google autocomplete place object
-            const updateMarker = [{lat: place.geometry.location.lat(), lng: place.geometry.location.lng()}]; 
-            setMarkers(updateMarker)
+                // UPDATE marker list with new lat and lng from google autocomplete place object
+                const updateMarker = [{lat: place.geometry.location.lat(), lng: place.geometry.location.lng()}]; 
+                setMarkers(updateMarker)
+            }
+        }
+        catch (error)
+        {
+            console.log("Autocomplete: handlePlaceChanged: error: ", error);
         } 
     }
 
@@ -55,22 +59,11 @@ const Autocomplete = (props) => {
             }
             });
         }
-    }, [markers])
+    }, [map])
   
     useEffect(() => {
         
         if (map) {
-            // Use google places api to get lat and lng from string address
-            let request = { query: inputBox.current.placeholder, fields: ["name", "geometry"]};
-            let service = new window.google.maps.places.PlacesService(map);
-        
-            service.findPlaceFromQuery(request, (results, status) => {
-            if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-                const updateMarker = [{lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng()}]; 
-                setMarkers(updateMarker)
-            }
-            });
-
             // Fit map to markers collection (right now there is only one marker)
             var bounds = new window.google.maps.LatLngBounds();
             window.google.maps.event.addListenerOnce(map, 'bounds_changed', function() { this.setZoom(Math.min(15, this.getZoom())); });
